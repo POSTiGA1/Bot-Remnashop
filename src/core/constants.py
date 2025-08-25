@@ -14,7 +14,6 @@ BOT_WEBHOOK_PATH: Final[str] = "/telegram"
 YOOKASSA_WEBHOOK_PATH: Final[str] = "/yookassa"
 
 TIMEZONE: Final[timezone] = timezone.utc
-UNLIMITED: Final[str] = "∞"
 
 CONTAINER_KEY: Final[str] = "dishka_container"
 CONFIG_KEY: Final[str] = "config"

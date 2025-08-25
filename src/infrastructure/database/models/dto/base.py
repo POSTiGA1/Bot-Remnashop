@@ -13,12 +13,12 @@ class PydanticModel(_BaseModel):
 
 
 class TrackableModel(PydanticModel):
-    __updated: dict[str, Any] = PrivateAttr(default_factory=dict)
+    __changed_data: dict[str, Any] = PrivateAttr(default_factory=dict)
 
     @property
-    def model_state(self) -> dict[str, Any]:
-        return self.__updated
+    def changed_data(self) -> dict[str, Any]:
+        return self.__changed_data
 
     def __setattr__(self, name: str, value: Any) -> None:
         super().__setattr__(name, value)
-        self.__updated[name] = value
+        self.__changed_data[name] = value

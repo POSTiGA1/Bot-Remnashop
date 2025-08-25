@@ -18,8 +18,8 @@ class PaymentGateway(Base):
     currency: Mapped[Currency] = mapped_column(Enum(Currency), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
-    shop_id: Mapped[str] = mapped_column(String, default=None, nullable=True)
-    api_token: Mapped[str] = mapped_column(String, default=None, nullable=True)
+    merchant_id: Mapped[str] = mapped_column(String, default=None, nullable=True)
+    secret: Mapped[str] = mapped_column(String, default=None, nullable=True)
 
     def dto(self) -> PaymentGatewayDto:
         return PaymentGatewayDto.model_validate(self)

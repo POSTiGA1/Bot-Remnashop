@@ -4,8 +4,7 @@ from typing import TYPE_CHECKING
 
 from fluentogram import TranslatorRunner
 
-from src.core.constants import UNLIMITED
-from src.core.i18n_keys import ByteUnitKey, TimeUnitKey
+from src.core.i18n_keys import ByteUnitKey, TimeUnitKey, UtilKey
 
 if TYPE_CHECKING:
     from src.infrastructure.database.models.dto import UserDto
@@ -99,7 +98,7 @@ def format_country_code(code: str) -> str:
 
 def format_subscription_period(days: int, i18n: TranslatorRunner) -> str:
     if days == -1:
-        return UNLIMITED
+        return i18n.get(UtilKey.UNLIMITED)
 
     if days % 365 == 0:
         value = days // 365

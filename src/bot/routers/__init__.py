@@ -12,7 +12,7 @@ __all__ = [
 ]
 
 
-def setup_routers(router: Router):
+def setup_routers(router: Router) -> None:
     # WARNING: The order of router registration matters!
     routers = [
         extra.notification.router,
@@ -42,6 +42,6 @@ def setup_routers(router: Router):
     router.include_routers(*routers)
 
 
-def setup_error_handlers(router: Router):
+def setup_error_handlers(router: Router) -> None:
     router.errors.register(on_unknown_intent, ExceptionTypeFilter(UnknownIntent))
     router.errors.register(on_unknown_state, ExceptionTypeFilter(UnknownState))

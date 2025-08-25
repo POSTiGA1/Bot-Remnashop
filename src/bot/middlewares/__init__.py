@@ -13,7 +13,7 @@ __all__ = [
 ]
 
 
-def setup_middlewares(router: Router):
+def setup_middlewares(router: Router) -> None:
     outer_middlewares: list[EventTypedMiddleware] = [
         ErrorMiddleware(),
         UserMiddleware(),

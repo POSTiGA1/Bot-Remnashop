@@ -13,21 +13,11 @@ async def _get_notification_types_data(
     settings: Any,
     notification_enum: Type[Enum],
 ) -> list[dict[str, Any]]:
-    notification_types_data: list[dict[str, Any]] = []
-    notification_types = list(notification_enum)
-
-    for notification_type in notification_types:
-        if not hasattr(settings, notification_type.value):
-            continue
-
-        is_enabled = getattr(settings, notification_type.value)
-        notification_types_data.append(
-            {
-                "type": notification_type.value,
-                "enabled": is_enabled,
-            }
-        )
-    return notification_types_data
+    return [
+        {"type": member.value, "enabled": getattr(settings, member.value)}
+        for member in notification_enum
+        if hasattr(settings, member.value)
+    ]
 
 
 @inject

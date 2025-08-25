@@ -6,11 +6,11 @@ from dishka import AsyncContainer
 from loguru import logger
 
 from src.core.constants import CONTAINER_KEY, USER_KEY
-from src.core.enums import MiddlewareEventType, SystemNotificationType
+from src.core.enums import MiddlewareEventType, SystemNotificationType, UserRole
 from src.core.utils.formatters import format_log_user
+from src.core.utils.message_payload import MessagePayload
 from src.infrastructure.database.models.dto import UserDto
-from src.services import UserService
-from src.services.notification import NotificationService
+from src.services import NotificationService, UserService
 
 from .base import EventTypedMiddleware
 
@@ -45,11 +45,17 @@ class UserMiddleware(EventTypedMiddleware):
             user = await user_service.create(aiogram_user=aiogram_user)
             logger.info(f"{format_log_user(user)} Created new user")
             await notification_service.system_notify(
-                devs=await user_service.get_devs(),
+                devs=await user_service.get_by_role(role=UserRole.DEV),
+                payload=MessagePayload(
+                    text_key="ntf-event-new-user",
+                    auto_delete_after=None,
+                    add_close_button=True,
+                    kwargs={
+                        "id": str(user.telegram_id),
+                        "name": user.name,
+                    },
+                ),
                 ntf_type=SystemNotificationType.USER_REGISTERED,
-                text_key="ntf-event-new-user",
-                id=str(user.telegram_id),
-                name=user.name,
             )
 
         await user_service.update_recent_activity(telegram_id=user.telegram_id)

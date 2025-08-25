@@ -23,6 +23,8 @@ class AppConfig(BaseConfig, env_prefix="APP_"):
 
     locales: LocaleList
     default_locale: Locale
+
+    crypt_key: SecretStr
     origins: StringList = StringList("")  # for miniapp
 
     bot: BotConfig = Field(default_factory=BotConfig)
@@ -45,5 +47,19 @@ class AppConfig(BaseConfig, env_prefix="APP_"):
 
         if not re.match(DOMAIN_REGEX, field.get_secret_value()):
             raise ValueError("APP_DOMAIN has invalid format")
+
+        return field
+
+    @field_validator("crypt_key")
+    @classmethod
+    def validate_crypt_key(
+        cls: Type["AppConfig"],
+        field: SecretStr,
+        info: FieldValidationInfo,
+    ) -> SecretStr:
+        validate_not_change_me(field, info)
+
+        if not re.match(r"^[A-Za-z0-9+/=]{44}$", field.get_secret_value()):
+            raise ValueError("APP_CRYPT_KEY must be a valid 44-character Base64 string")
 
         return field

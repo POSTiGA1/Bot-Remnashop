@@ -16,10 +16,10 @@ class CommandService(BaseService):
 
         locales_to_set: list[Optional[Locale]] = list(self.config.locales) + [None]
 
-        for lang_code in locales_to_set:
-            display_lang_code = lang_code if lang_code else "default"
+        for language_code in locales_to_set:
+            display_language_code = language_code if language_code else "default"
             i18n = self.translator_hub.get_translator_by_locale(
-                locale=lang_code or self.config.default_locale
+                locale=language_code or self.config.default_locale
             )
 
             commands_for_locale = [
@@ -33,16 +33,16 @@ class CommandService(BaseService):
             success = await self.bot.set_my_commands(
                 commands=commands_for_locale,
                 scope=BotCommandScopeAllPrivateChats(),
-                language_code=lang_code,
+                language_code=language_code,
             )
 
             if success:
                 logger.info(
-                    f"Commands successfully set for language '{display_lang_code}': "
+                    f"Commands successfully set for language '{display_language_code}': "
                     f"{[cmd.command for cmd in commands_for_locale]}"
                 )
             else:
-                logger.error(f"Failed to set commands for language '{display_lang_code}'")
+                logger.error(f"Failed to set commands for language '{display_language_code}'")
 
     async def delete(self) -> None:
         if not self.config.bot.setup_commands:
@@ -51,15 +51,15 @@ class CommandService(BaseService):
 
         locales_to_delete: list[Optional[str]] = list(self.config.locales) + [None]
 
-        for lang_code in locales_to_delete:
-            display_lang_code = lang_code if lang_code else "default"
+        for language_code in locales_to_delete:
+            display_language_code = language_code if language_code else "default"
 
             success = await self.bot.delete_my_commands(
                 scope=BotCommandScopeAllPrivateChats(),
-                language_code=lang_code,
+                language_code=language_code,
             )
 
             if success:
-                logger.info(f"Commands deleted for '{display_lang_code}'")
+                logger.info(f"Commands deleted for '{display_language_code}'")
             else:
-                logger.error(f"Failed to delete commands for '{display_lang_code}'")
+                logger.error(f"Failed to delete commands for '{display_language_code}'")

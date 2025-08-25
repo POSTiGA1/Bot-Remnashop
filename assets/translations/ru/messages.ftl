@@ -215,7 +215,7 @@ msg-admins-main = <b>👮‍♂️ Администраторы</b>
 
 # Gateways
 msg-gateways-main = <b>🌐 Платежные системы</b>
-msg-gateways-shop = 
+msg-gateways-merchant = 
     <b>🌐 { gateway-type }</b>
 
     Введите { $type ->
@@ -225,7 +225,7 @@ msg-gateways-shop =
     [heleket] MERCHANT ID <a href="https://heleket.com/">(*)</a>
     *[other] { $type }
     }
-msg-gateways-token =
+msg-gateways-secret =
     <b>🌐 { gateway-type }</b>
 
     Введите { $type ->

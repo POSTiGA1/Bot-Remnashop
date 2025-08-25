@@ -10,13 +10,12 @@ from src.core.constants import USER_KEY
 from src.core.utils.adapter import DialogDataAdapter
 from src.core.utils.formatters import format_subscription_period
 from src.infrastructure.database.models.dto import PlanDto, UserDto
-from src.services import NotificationService, PaymentGatewayService, PlanService, UserService
+from src.services import PaymentGatewayService, PlanService
 
 
 @inject
 async def subscription_getter(
     dialog_manager: DialogManager,
-    user_service: FromDishka[UserService],
     **kwargs: Any,
 ) -> dict[str, Any]:
     return {}
@@ -26,7 +25,6 @@ async def subscription_getter(
 async def plans_getter(
     dialog_manager: DialogManager,
     plan_service: FromDishka[PlanService],
-    notification_service: FromDishka[NotificationService],
     **kwargs: Any,
 ) -> dict[str, Any]:
     user: UserDto = dialog_manager.middleware_data[USER_KEY]
@@ -48,15 +46,12 @@ async def plans_getter(
 @inject
 async def duration_getter(
     dialog_manager: DialogManager,
-    user_service: FromDishka[UserService],
     payment_gateway_service: FromDishka[PaymentGatewayService],
     i18n: FromDishka[TranslatorRunner],
     **kwargs: Any,
 ) -> dict[str, Any]:
     adapter = DialogDataAdapter(dialog_manager)
     plan = adapter.load(PlanDto)
-    logger.debug(f"Loaded plan: {plan}")
-    logger.critical(dialog_manager.dialog_data)
 
     currency = await payment_gateway_service.get_default_currency()
     durations = [
@@ -82,7 +77,6 @@ async def duration_getter(
 @inject
 async def payment_method_getter(
     dialog_manager: DialogManager,
-    user_service: FromDishka[UserService],
     payment_gateway_service: FromDishka[PaymentGatewayService],
     i18n: FromDishka[TranslatorRunner],
     **kwargs: Any,
@@ -122,7 +116,6 @@ async def payment_method_getter(
 @inject
 async def confirm_getter(
     dialog_manager: DialogManager,
-    user_service: FromDishka[UserService],
     i18n: FromDishka[TranslatorRunner],
     **kwargs: Any,
 ) -> dict[str, Any]:

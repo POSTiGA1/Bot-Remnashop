@@ -69,8 +69,8 @@ class DashboardRemnashop(StatesGroup):
 
 class RemnashopGateways(StatesGroup):
     MAIN = State()
-    SHOP = State()
-    TOKEN = State()
+    MERCHANT = State()
+    SECRET = State()
     CURRENCY = State()
 
 

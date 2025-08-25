@@ -5,11 +5,13 @@ from aiogram_dialog.widgets.kbd import Button, Select
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 from loguru import logger
+from pydantic import SecretStr
 
 from src.bot.states import RemnashopGateways
 from src.core.constants import USER_KEY
 from src.core.enums import Currency, PaymentGatewayType
 from src.core.utils.formatters import format_log_user
+from src.core.utils.message_payload import MessagePayload
 from src.infrastructure.database.models.dto import UserDto
 from src.services import NotificationService, PaymentGatewayService
 
@@ -24,14 +26,18 @@ async def on_gateway_selected(
 ) -> None:
     user: UserDto = sub_manager.middleware_data[USER_KEY]
     gateway_id = int(sub_manager.item_id)
-    gateway = await payment_gateway_service.get(gateway_id=gateway_id)
+    gateway = await payment_gateway_service.get(gateway_id)
+    logger.debug(f"{format_log_user(user)} Gateway '{gateway_id}' selected")
 
     if gateway.type == PaymentGatewayType.TELEGRAM_STARS:
-        await notification_service.notify_user(user=user, text_key="ntf-gateway-not-configurable")
+        await notification_service.notify_user(
+            user=user,
+            payload=MessagePayload(text_key="ntf-gateway-not-configurable"),
+        )
         return
 
     sub_manager.manager.dialog_data["gateway_id"] = gateway_id
-    await sub_manager.switch_to(state=RemnashopGateways.SHOP)
+    await sub_manager.switch_to(state=RemnashopGateways.MERCHANT)
 
 
 @inject
@@ -44,8 +50,8 @@ async def on_gateway_test(
 ) -> None:
     user: UserDto = sub_manager.middleware_data[USER_KEY]
     gateway_id = int(sub_manager.item_id)
-    gateway = await payment_gateway_service.get(gateway_id=gateway_id)
-
+    gateway = await payment_gateway_service.get(gateway_id)
+    logger.debug(f"{format_log_user(user)} Testing gateway '{gateway_id}'")
     # TODO: Implement test payment
 
 
@@ -60,21 +66,24 @@ async def on_active_toggle(
     await sub_manager.load_data()
     user: UserDto = sub_manager.middleware_data[USER_KEY]
     gateway_id = int(sub_manager.item_id)
-    gateway = await payment_gateway_service.get(gateway_id=gateway_id)
+    gateway = await payment_gateway_service.get(gateway_id)
 
     if gateway.type != PaymentGatewayType.TELEGRAM_STARS:
-        if not gateway.shop_id or not gateway.api_token:
-            logger.warning(f"[{format_log_user(user)}] Gateway '{gateway_id}' is not configured")
-            await notification_service.notify_user(user=user, text_key="ntf-gateway-not-configured")
+        if not gateway.merchant_id or not gateway.secret:
+            logger.warning(f"{format_log_user(user)} Gateway '{gateway_id}' is not configured")
+            await notification_service.notify_user(
+                user=user,
+                payload=MessagePayload(text_key="ntf-gateway-not-configured"),
+            )
             return
 
     gateway.is_active = not gateway.is_active
-    logger.debug(f"[{format_log_user(user)}] Toggling active state for gateway '{gateway_id}'")
-    await payment_gateway_service.update(gateway=gateway)
+    logger.debug(f"{format_log_user(user)} Toggling active state for gateway '{gateway_id}'")
+    await payment_gateway_service.update(gateway)
 
 
 @inject
-async def on_shop_input(
+async def on_merchant_input(
     message: Message,
     widget: MessageInput,
     dialog_manager: DialogManager,
@@ -85,20 +94,24 @@ async def on_shop_input(
     user: UserDto = dialog_manager.middleware_data[USER_KEY]
     gateway_id = dialog_manager.dialog_data["gateway_id"]
 
-    if message.text is None or len(message.text) < 4:
-        logger.warning(f"{format_log_user(user)} Provided empty gateway id input")
-        await notification_service.notify_user(user=user, text_key="ntf-gateway-wrong-id")
+    if message.text is None:
+        logger.warning(f"{format_log_user(user)} Provided empty merchant_id input")
+        await notification_service.notify_user(
+            user=user,
+            payload=MessagePayload(text_key="ntf-gateway-wrong-merchant"),
+        )
         return
 
     gateway = await payment_gateway_service.get(gateway_id=gateway_id)
-    gateway.shop_id = message.text
+    gateway.merchant_id = message.text
 
-    await payment_gateway_service.update(gateway=gateway)
-    await dialog_manager.switch_to(state=RemnashopGateways.TOKEN)
+    logger.debug(f"{format_log_user(user)} Changed merchant_id for gateway '{gateway_id}'")
+    await payment_gateway_service.update(gateway)
+    await dialog_manager.switch_to(state=RemnashopGateways.SECRET)
 
 
 @inject
-async def on_token_input(
+async def on_secret_input(
     message: Message,
     widget: MessageInput,
     dialog_manager: DialogManager,
@@ -109,15 +122,19 @@ async def on_token_input(
     user: UserDto = dialog_manager.middleware_data[USER_KEY]
     gateway_id = dialog_manager.dialog_data["gateway_id"]
 
-    if message.text is None or len(message.text) < 8:
-        logger.warning(f"{format_log_user(user)} Provided empty gateway token input")
-        await notification_service.notify_user(user=user, text_key="ntf-gateway-wrong-token")
+    if message.text is None:
+        logger.warning(f"{format_log_user(user)} Provided empty gateway secret input")
+        await notification_service.notify_user(
+            user=user,
+            payload=MessagePayload(text_key="ntf-gateway-wrong-secret"),
+        )
         return
 
-    gateway = await payment_gateway_service.get(gateway_id=gateway_id)
-    gateway.api_token = message.text  # TODO: Implement encrypt
+    gateway = await payment_gateway_service.get(gateway_id)
+    gateway.secret = SecretStr(message.text)
 
-    await payment_gateway_service.update(gateway=gateway)
+    logger.debug(f"{format_log_user(user)} Changed secret for gateway '{gateway_id}'")
+    await payment_gateway_service.update(gateway)
     await dialog_manager.switch_to(state=RemnashopGateways.MAIN)
 
 
@@ -130,4 +147,5 @@ async def on_default_currency_selected(
     payment_gateway_service: FromDishka[PaymentGatewayService],
 ) -> None:
     user: UserDto = dialog_manager.middleware_data[USER_KEY]
+    logger.debug(f"{format_log_user(user)} Set default currency '{selected_currency}'")
     await payment_gateway_service.set_default_currency(selected_currency)

@@ -21,18 +21,27 @@ ntf-event-error =
     }
     </blockquote>
     
-    
+ntf-event-error-webhook =
+    #EventError
+
+    <b>🔅 Событие: Зафиксирована ошибка вебхука!</b>
+
+    <blockquote>
+    • Ошибка: { $error }
+    </blockquote>
 
 ntf-event-bot-startup =
     #EventBotStarted
 
     <b>🔅 Событие: Бот запущен!</b>
 
-    Режим обслуживания: { $mode ->
+    <blockquote>
+    • Режим обслуживания: { $mode ->
         [global] включен (глобальный)
         [purchase] включен (платежи)
         *[off] выключен
     }
+    </blockquote>
 
 ntf-event-bot-shutdown =
     #EventBotShutdown
@@ -83,9 +92,9 @@ ntf-plan-created-success = <i>✅ План успешно создан</i>
 
 
 ntf-gateway-not-configured = <i>❌ Платежный шлюз не настроен</i>
-ntf-gateway-not-configurable = <i>❌ Платежный шлюз не может быть настроен</i>
-ntf-gateway-wrong-id = <i>❌ Некорректный ID</i>
-ntf-gateway-wrong-token = <i>❌ Некорректный TOKEN</i>
+ntf-gateway-not-configurable = <i>❌ Платежный шлюз не имеет настроек</i>
+ntf-gateway-wrong-merchant = <i>❌ Некорректный MERCHANT</i>
+ntf-gateway-wrong-secret = <i>❌ Некорректный SECRET</i>
 
 
 ntf-subscription-plans-not-available = <i>❌ Нет доступных планов</i>

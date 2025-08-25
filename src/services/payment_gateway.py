@@ -13,6 +13,8 @@ from src.infrastructure.redis import RedisRepository
 
 from .base import BaseService
 
+# TODO: Make payment gateway sorting customizable for display
+
 
 class PaymentGatewayService(BaseService):
     def __init__(
@@ -28,39 +30,29 @@ class PaymentGatewayService(BaseService):
         self.uow = uow
 
     async def get(self, gateway_id: int) -> Optional[PaymentGatewayDto]:
-        gateway = await self.uow.repository.gateways.get(gateway_id=gateway_id)
-        return gateway.dto() if gateway else None
+        return await self.uow.repository.gateways.get(gateway_id)
 
     async def get_by_type(self, gateway_type: PaymentGatewayType) -> Optional[PaymentGatewayDto]:
-        gateway = await self.uow.repository.gateways.get_by_type(gateway_type=gateway_type)
-        return gateway.dto() if gateway else None
+        return await self.uow.repository.gateways.get_by_type(gateway_type)
 
     async def get_all(self) -> list[PaymentGatewayDto]:
-        gateways = await self.uow.repository.gateways.get_all()
-        return [gateway.dto() for gateway in gateways]
+        return await self.uow.repository.gateways.get_all()
 
     async def update(self, gateway: PaymentGatewayDto) -> Optional[PaymentGatewayDto]:
-        db_gateway = await self.uow.repository.gateways.get(gateway_id=gateway.id)
-
-        if not db_gateway:
-            return None
-
-        db_gateway = await self.uow.repository.gateways.update(gateway.id, **gateway.model_state)
-
-        return db_gateway.dto() if db_gateway else None
+        return await self.uow.repository.gateways.update(
+            gateway_id=gateway.id,
+            **gateway.changed_data,
+        )
 
     async def filter_active(self, is_active: bool = True) -> list[PaymentGatewayDto]:
-        gateways = await self.uow.repository.gateways.filter_active(is_active)
-        return [gateway.dto() for gateway in gateways]
+        return await self.uow.repository.gateways.filter_active(is_active)
 
     async def get_default_currency(self) -> Currency:
-        key = DefaultCurrencyKey()
         return await self.redis_repository.get(
-            key=key,
+            key=DefaultCurrencyKey(),
             validator=Currency,
             default=Currency.RUB,
         )
 
     async def set_default_currency(self, currency: Currency) -> None:
-        key = DefaultCurrencyKey()
-        await self.redis_repository.set(key=key, value=currency.value)
+        await self.redis_repository.set(key=DefaultCurrencyKey(), value=currency.value)

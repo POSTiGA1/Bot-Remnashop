@@ -13,9 +13,9 @@ from src.core.constants import USER_KEY
 from src.core.enums import Currency, PlanAvailability, PlanType
 from src.core.utils.adapter import DialogDataAdapter
 from src.core.utils.formatters import format_log_user
+from src.core.utils.message_payload import MessagePayload
 from src.infrastructure.database.models.dto import PlanDto, PlanDurationDto, PlanPriceDto, UserDto
-from src.services import NotificationService, PlanService
-from src.services.user import UserService
+from src.services import NotificationService, PlanService, UserService
 
 
 @inject
@@ -62,7 +62,10 @@ async def on_name_input(
 
     if message.text is None:
         logger.warning(f"{format_log_user(user)} Provided empty plan name input")
-        await notification_service.notify_user(user=user, text_key="ntf-plan-wrong-name")
+        await notification_service.notify_user(
+            user=user,
+            payload=MessagePayload(text_key="ntf-plan-wrong-name"),
+        )
         return
 
     if await plan_service.get_by_name(name=message.text):
@@ -70,7 +73,10 @@ async def on_name_input(
             f"{format_log_user(user)} Tried to set plan name to "
             f"'{message.text}', which already exists"
         )
-        await notification_service.notify_user(user=user, text_key="ntf-plan-wrong-name")
+        await notification_service.notify_user(
+            user=user,
+            payload=MessagePayload(text_key="ntf-plan-wrong-name"),
+        )
         return
 
     adapter = DialogDataAdapter(dialog_manager)
@@ -173,7 +179,10 @@ async def on_traffic_input(
         logger.warning(
             f"{format_log_user(user)} Provided invalid traffic limit input: '{message.text}'"
         )
-        await notification_service.notify_user(user=user, text_key="ntf-plan-wrong-number")
+        await notification_service.notify_user(
+            user=user,
+            payload=MessagePayload(text_key="ntf-plan-wrong-number"),
+        )
         return
 
     number = int(message.text)
@@ -209,7 +218,10 @@ async def on_devices_input(
         logger.warning(
             f"{format_log_user(user)} Provided invalid device limit input: '{message.text}'"
         )
-        await notification_service.notify_user(user=user, text_key="ntf-plan-wrong-number")
+        await notification_service.notify_user(
+            user=user,
+            payload=MessagePayload(text_key="ntf-plan-wrong-number"),
+        )
         return
 
     number = int(message.text)
@@ -281,7 +293,10 @@ async def on_duration_input(
 
     if message.text is None or not (message.text.isdigit() and int(message.text) > 0):
         logger.warning(f"{format_log_user(user)} Provided invalid duration input: '{message.text}'")
-        await notification_service.notify_user(user=user, text_key="ntf-plan-wrong-number")
+        await notification_service.notify_user(
+            user=user,
+            payload=MessagePayload(text_key="ntf-plan-wrong-number"),
+        )
         return
 
     number = int(message.text)
@@ -336,7 +351,10 @@ async def on_price_input(
 
     if message.text is None:
         logger.warning(f"{format_log_user(user)} Provided empty price input")
-        await notification_service.notify_user(user=user, text_key="ntf-plan-wrong-number")
+        await notification_service.notify_user(
+            user=user,
+            payload=MessagePayload(text_key="ntf-plan-wrong-number"),
+        )
         return
 
     try:
@@ -345,7 +363,10 @@ async def on_price_input(
             raise InvalidOperation
     except InvalidOperation:
         logger.warning(f"{format_log_user(user)} Provided invalid price input: '{message.text}'")
-        await notification_service.notify_user(user=user, text_key="ntf-plan-wrong-number")
+        await notification_service.notify_user(
+            user=user,
+            payload=MessagePayload(text_key="ntf-plan-wrong-number"),
+        )
         return
 
     adapter = DialogDataAdapter(dialog_manager)
@@ -394,7 +415,10 @@ async def on_allowed_user_input(
 
     if message.text is None or not message.text.isdigit():
         logger.warning(f"{format_log_user(user)} Provided non-numeric user ID")
-        await notification_service.notify_user(user=user, text_key="ntf-plan-wrong-allowed-id")
+        await notification_service.notify_user(
+            user=user,
+            payload=MessagePayload(text_key="ntf-plan-wrong-allowed-id"),
+        )
         return
 
     adapter = DialogDataAdapter(dialog_manager)
@@ -403,7 +427,10 @@ async def on_allowed_user_input(
 
     if not allowed_user:
         logger.warning(f"{format_log_user(user)} No user found with Telegram ID '{message.text}'")
-        await notification_service.notify_user(user=user, text_key="ntf-plan-no-user-found")
+        await notification_service.notify_user(
+            user=user,
+            payload=MessagePayload(text_key="ntf-plan-no-user-found"),
+        )
         return  # TODO: Allow adding non-existent users to the list?
 
     if plan.allowed_user_ids is None:
@@ -413,7 +440,10 @@ async def on_allowed_user_input(
         logger.warning(
             f"{format_log_user(user)} User '{allowed_user.telegram_id}' is already allowed for plan"
         )
-        await notification_service.notify_user(user=user, text_key="ntf-plan-user-already-allowed")
+        await notification_service.notify_user(
+            user=user,
+            payload=MessagePayload(text_key="ntf-plan-user-already-allowed"),
+        )
         return
 
     plan.allowed_user_ids.append(allowed_user.telegram_id)
@@ -450,51 +480,60 @@ async def on_confirm_plan(
     logger.debug(f"{format_log_user(user)} Attempted to confirm plan")
 
     adapter = DialogDataAdapter(dialog_manager)
-    plan_data = adapter.load(PlanDto)
+    plan_dto = adapter.load(PlanDto)
 
-    if not plan_data:
+    if not plan_dto:
         logger.error(f"{format_log_user(user)} Failed to load PlanDto for plan confirmation")
-        await notification_service.notify_user(user=user, text_key="ntf-plan-save-error")
+        await notification_service.notify_user(
+            user=user,
+            payload=MessagePayload(text_key="ntf-plan-save-error"),
+        )
         return
 
-    if plan_data.type == PlanType.DEVICES:
-        plan_data.traffic_limit = None
-    elif plan_data.type == PlanType.TRAFFIC:
-        plan_data.device_limit = None
-    elif plan_data.type == PlanType.BOTH:
+    if plan_dto.type == PlanType.DEVICES:
+        plan_dto.traffic_limit = None
+    elif plan_dto.type == PlanType.TRAFFIC:
+        plan_dto.device_limit = None
+    elif plan_dto.type == PlanType.BOTH:
         pass
     else:  # PlanType.UNLIMITED
-        plan_data.traffic_limit = None
-        plan_data.device_limit = None
+        plan_dto.traffic_limit = None
+        plan_dto.device_limit = None
 
-    if plan_data.availability != PlanAvailability.ALLOWED:
-        plan_data.allowed_user_ids = None
+    if plan_dto.availability != PlanAvailability.ALLOWED:
+        plan_dto.allowed_user_ids = None
 
-    if plan_data.allowed_user_ids is None:
-        plan_data.allowed_user_ids = []
+    if plan_dto.allowed_user_ids is None:
+        plan_dto.allowed_user_ids = []
 
-    if plan_data.id:
-        logger.info(f"{format_log_user(user)} Updating existing plan with ID '{plan_data.id}'")
-        await plan_service.update(plan=plan_data)
-        logger.info(f"{format_log_user(user)} Plan '{plan_data.name}' updated successfully")
-        await notification_service.notify_user(user=user, text_key="ntf-plan-updated-success")
+    if plan_dto.id:
+        logger.info(f"{format_log_user(user)} Updating existing plan with ID '{plan_dto.id}'")
+        await plan_service.update(plan_dto)
+        logger.info(f"{format_log_user(user)} Plan '{plan_dto.name}' updated successfully")
+        await notification_service.notify_user(
+            user=user,
+            payload=MessagePayload(text_key="ntf-plan-updated-success"),
+        )
     else:
-        existing_plan: PlanDto = await plan_service.get_by_name(name=plan_data.name)
+        existing_plan: PlanDto = await plan_service.get_by_name(name=plan_dto.name)
         if existing_plan:
             logger.warning(
-                f"{format_log_user(user)} Plan with name '{plan_data.name}' "
+                f"{format_log_user(user)} Plan with name '{plan_dto.name}' "
                 f"already exists during creation. Aborting plan creation"
             )
             await notification_service.notify_user(
                 user=user,
-                text_key="ntf-plan-name-already-exists",
+                payload=MessagePayload(text_key="ntf-plan-name-already-exists"),
             )
             return
 
-        logger.info(f"{format_log_user(user)} Creating new plan with name '{plan_data.name}'")
-        plan = await plan_service.create(plan_data)
+        logger.info(f"{format_log_user(user)} Creating new plan with name '{plan_dto.name}'")
+        plan = await plan_service.create(plan_dto)
         logger.info(f"{format_log_user(user)} Plan '{plan.name}' created successfully")
-        await notification_service.notify_user(user=user, text_key="ntf-plan-created-success")
+        await notification_service.notify_user(
+            user=user,
+            payload=MessagePayload(text_key="ntf-plan-created-success"),
+        )
 
     await dialog_manager.reset_stack()
     await dialog_manager.start(state=RemnashopPlans.MAIN)

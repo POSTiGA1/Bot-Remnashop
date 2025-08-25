@@ -72,7 +72,7 @@ unit-year = { $value } { $value ->
 
 # Gateways
 gateway-type = { $type ->
-    [telegram_stars] Звезды
+    [telegram_stars] Telegram Stars
     [yookassa] ЮKassa
     [yoomoney] ЮMoney
     [cryptomus] Cryptomus

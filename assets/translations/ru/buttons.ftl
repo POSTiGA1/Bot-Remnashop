@@ -190,7 +190,7 @@ btn-subscription-change = 🔃 Изменить подписку
 
 btn-subscription-plan = { $name }
 btn-subscription-duration = { $period } | { $price } { $currency }
-btn-subscription-payment-method = { gateway-type } { $price } { $currency }
+btn-subscription-payment-method = { gateway-type } | { $price } { $currency }
 
 btn-subscription-back-plans = ⬅️ Назад к выбору плана
 btn-subscription-back-duration = ⬅️ Изменить длительность

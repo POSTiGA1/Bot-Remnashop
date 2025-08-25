@@ -14,8 +14,8 @@ class RepositoriesFacade(BaseRepository):
     plans: PlanRepository
 
     def __init__(self, session: AsyncSession) -> None:
-        super().__init__(session=session)
-        self.gateways = PaymentGatewayRepository(session=session)
-        self.users = UserRepository(session=session)
-        self.promocodes = PromocodeRepository(session=session)
-        self.plans = PlanRepository(session=session)
+        super().__init__(session)
+        self.gateways = PaymentGatewayRepository(session)
+        self.users = UserRepository(session)
+        self.promocodes = PromocodeRepository(session)
+        self.plans = PlanRepository(session)

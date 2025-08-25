@@ -8,6 +8,7 @@ from loguru import logger
 from src.bot.states import Subscription
 from src.core.constants import USER_KEY
 from src.core.utils.adapter import DialogDataAdapter
+from src.core.utils.message_payload import MessagePayload
 from src.infrastructure.database.models.dto import PlanDto, UserDto
 from src.services import NotificationService, PaymentGatewayService, PlanService
 
@@ -22,20 +23,20 @@ async def on_subscription_plans(
     notification_service: FromDishka[NotificationService],
 ) -> None:
     user: UserDto = dialog_manager.middleware_data[USER_KEY]
-    plans: list[PlanDto] = await plan_service.get_available_plans(user=user)
+    plans: list[PlanDto] = await plan_service.get_available_plans(user)
     gateways = await payment_gateway_service.filter_active()
 
     if not plans:
         await notification_service.notify_user(
             user=user,
-            text_key="ntf-subscription-plans-not-available",
+            payload=MessagePayload(text_key="ntf-subscription-plans-not-available"),
         )
         return
 
     if not gateways:
         await notification_service.notify_user(
             user=user,
-            text_key="ntf-subscription-gateways-not-available",
+            payload=MessagePayload(text_key="ntf-subscription-gateways-not-available"),
         )
         return
 

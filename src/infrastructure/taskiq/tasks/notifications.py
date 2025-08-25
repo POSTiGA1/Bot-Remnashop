@@ -1,11 +1,12 @@
-from typing import Optional
+from typing import Any, Optional
 
 from aiogram.types import BufferedInputFile
 from dishka import FromDishka
 from dishka.integrations.taskiq import inject
 
 from src.core.config.app import AppConfig
-from src.core.enums import MaintenanceMode, MediaType, SystemNotificationType
+from src.core.enums import MediaType, SystemNotificationType, UserRole
+from src.core.utils.message_payload import MessagePayload
 from src.infrastructure.taskiq.broker import broker
 from src.services import NotificationService, UserService
 
@@ -15,16 +16,20 @@ from src.services import NotificationService, UserService
 async def send_system_notification_task(
     ntf_type: SystemNotificationType,
     text_key: str,
-    mode: MaintenanceMode,
     user_service: FromDishka[UserService],
     notification_service: FromDishka[NotificationService],
+    **kwargs: Any,
 ) -> None:
-    devs = await user_service.get_devs()
+    devs = await user_service.get_by_role(role=UserRole.DEV)
     await notification_service.system_notify(
         devs=devs,
+        payload=MessagePayload(
+            text_key=text_key,
+            auto_delete_after=None,
+            add_close_button=True,
+            kwargs=kwargs,
+        ),
         ntf_type=ntf_type,
-        text_key=text_key,
-        mode=mode,
     )
 
 
@@ -51,11 +56,17 @@ async def send_error_notification_task(
 
     await notification_service.notify_super_dev(
         dev=dev_user,
-        text_key="ntf-event-error",
-        media=file_data,
-        media_type=MediaType.DOCUMENT,
-        user=bool(user_id),
-        id=user_id,
-        name=user_name,
-        error=text,
+        payload=MessagePayload(
+            text_key="ntf-event-error",
+            media=file_data,
+            media_type=MediaType.DOCUMENT,
+            auto_delete_after=None,
+            add_close_button=True,
+            kwargs={
+                "user": bool(user_id),
+                "id": user_id,
+                "name": user_name,
+                "error": text,
+            },
+        ),
     )

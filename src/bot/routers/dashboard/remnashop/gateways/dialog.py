@@ -1,7 +1,6 @@
 from aiogram_dialog import Dialog, StartMode, Window
 from aiogram_dialog.widgets.input import MessageInput
 from aiogram_dialog.widgets.kbd import Button, Column, ListGroup, Row, Select, Start, SwitchTo
-from aiogram_dialog.widgets.text import Format
 from magic_filter import F
 
 from src.bot.routers.extra.test import show_dev_popup
@@ -15,8 +14,8 @@ from .handlers import (
     on_default_currency_selected,
     on_gateway_selected,
     on_gateway_test,
-    on_shop_input,
-    on_token_input,
+    on_merchant_input,
+    on_secret_input,
 )
 
 gateways = Window(
@@ -65,9 +64,9 @@ gateways = Window(
     getter=gateways_getter,
 )
 
-gateway_shop = Window(
+gateway_merchant = Window(
     Banner(BannerName.DASHBOARD),
-    I18nFormat("msg-gateways-shop", type=F["type"]),
+    I18nFormat("msg-gateways-merchant", type=F["type"]),
     Row(
         SwitchTo(
             text=I18nFormat("btn-back"),
@@ -75,25 +74,25 @@ gateway_shop = Window(
             state=RemnashopGateways.MAIN,
         ),
     ),
-    MessageInput(func=on_shop_input),
+    MessageInput(func=on_merchant_input),
     IgnoreUpdate(),
-    state=RemnashopGateways.SHOP,
+    state=RemnashopGateways.MERCHANT,
     getter=gateway_getter,
 )
 
-gateway_token = Window(
+gateway_secret = Window(
     Banner(BannerName.DASHBOARD),
-    I18nFormat("msg-gateways-token", type=F["type"]),
+    I18nFormat("msg-gateways-secret", type=F["type"]),
     Row(
         SwitchTo(
             text=I18nFormat("btn-back"),
             id="back",
-            state=RemnashopGateways.SHOP,
+            state=RemnashopGateways.MERCHANT,
         ),
     ),
-    MessageInput(func=on_token_input),
+    MessageInput(func=on_secret_input),
     IgnoreUpdate(),
-    state=RemnashopGateways.TOKEN,
+    state=RemnashopGateways.SECRET,
     getter=gateway_getter,
 )
 
@@ -129,7 +128,7 @@ default_currency = Window(
 
 router = Dialog(
     gateways,
-    gateway_shop,
-    gateway_token,
+    gateway_merchant,
+    gateway_secret,
     default_currency,
 )

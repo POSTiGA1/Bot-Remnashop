@@ -1,12 +1,14 @@
-from typing import Any, Optional, Type, TypeVar, Union, cast
+from typing import Any, Iterable, Optional, Type, TypeVar, Union, cast
 
 from sqlalchemy import ColumnExpressionArgument, delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
+from src.infrastructure.database.models.dto import TrackableModel
 from src.infrastructure.database.models.sql import Base
 
 T = TypeVar("T", bound=Base)
+U = TypeVar("U", bound=TrackableModel)
 ModelType = Type[T]
 
 ConditionType = ColumnExpressionArgument[Any]
@@ -31,11 +33,7 @@ class BaseRepository:
     async def delete_instance(self, instance: T) -> None:
         await self.session.delete(instance)
 
-    async def _get_one(
-        self,
-        model: ModelType[T],
-        *conditions: ConditionType,
-    ) -> Optional[T]:
+    async def _get_one(self, model: ModelType[T], *conditions: ConditionType) -> Optional[T]:
         return cast(Optional[T], await self.session.scalar(select(model).where(*conditions)))
 
     async def _get_many(
@@ -67,7 +65,7 @@ class BaseRepository:
         if not kwargs:
             if not load_result:
                 return None
-            return cast(Optional[T], await self._get(model, *conditions))
+            return cast(Optional[T], await self._get_one(model, *conditions))
 
         query = update(model).where(*conditions).values(**kwargs)
 
@@ -77,10 +75,14 @@ class BaseRepository:
         result = await self.session.execute(query)
         return result.scalar_one_or_none() if load_result else None
 
-    async def _delete(
-        self,
-        model: ModelType[T],
-        *conditions: ConditionType,
-    ) -> int:
+    async def _delete(self, model: ModelType[T], *conditions: ConditionType) -> int:
         result = await self.session.execute(delete(model).where(*conditions))
         return result.rowcount
+
+    @staticmethod
+    def to_dto(instance: Optional[T]) -> Optional[U]:
+        return instance.dto() if instance else None
+
+    @staticmethod
+    def to_dto_list(instances: Iterable[T]) -> list[U]:
+        return [instance.dto() for instance in instances]

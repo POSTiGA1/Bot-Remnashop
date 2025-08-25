@@ -12,7 +12,7 @@ from remnawave_api.models import (
     StatisticResponseDto,
 )
 
-from src.core.constants import UNLIMITED
+from src.core.i18n_keys import UtilKey
 from src.core.utils.formatters import (
     format_bytes,
     format_country_code,
@@ -126,7 +126,7 @@ async def nodes_getter(
                         round_up=True,
                     )
                     if node.traffic_limit_bytes > 0
-                    else UNLIMITED
+                    else i18n.get(UtilKey.UNLIMITED)
                 ),
             },
         )

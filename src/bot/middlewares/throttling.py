@@ -8,6 +8,7 @@ from loguru import logger
 from src.core.constants import CONTAINER_KEY, USER_KEY
 from src.core.enums import MiddlewareEventType
 from src.core.utils.formatters import format_log_user
+from src.core.utils.message_payload import MessagePayload
 from src.infrastructure.database.models.dto import UserDto
 from src.services import NotificationService
 
@@ -34,7 +35,7 @@ class ThrottlingMiddleware(EventTypedMiddleware):
         if user.telegram_id in self.cache:
             await notification_service.notify_user(
                 user=user,
-                text_key="ntf-throttling-many-requests",
+                payload=MessagePayload(text_key="ntf-throttling-many-requests"),
             )
             logger.warning(f"{format_log_user(user)} Throttled")
             return

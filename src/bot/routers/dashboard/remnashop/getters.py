@@ -4,6 +4,7 @@ from aiogram_dialog import DialogManager
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
+from src.core.enums import UserRole
 from src.infrastructure.database.models.dto import UserDto
 from src.services import UserService
 
@@ -14,7 +15,7 @@ async def admins_getter(
     user_service: FromDishka[UserService],
     **kwargs: Any,
 ) -> dict[str, Any]:
-    devs: list[UserDto] = await user_service.get_devs()
-    admins: list[UserDto] = await user_service.get_admins()
+    devs: list[UserDto] = await user_service.get_by_role(role=UserRole.DEV)
+    admins: list[UserDto] = await user_service.get_by_role(role=UserRole.ADMIN)
 
     return {"admins": devs + admins}

@@ -13,11 +13,7 @@ from .base import BaseService
 
 
 class MaintenanceService(BaseService):
-    async def check_access(
-        self,
-        user: UserDto,
-        event: TelegramObject,
-    ) -> bool:
+    async def is_access_allowed(self, user: UserDto, event: TelegramObject) -> bool:
         if not await self.is_active():
             logger.debug(f"{format_log_user(user)} Access allowed (maintenance not active)")
             return True
@@ -45,9 +41,8 @@ class MaintenanceService(BaseService):
         return True
 
     async def get_current_mode(self) -> MaintenanceMode:
-        key = MaintenanceModeKey()
         mode = await self.redis_repository.get(
-            key=key,
+            key=MaintenanceModeKey(),
             validator=MaintenanceMode,
             default=MaintenanceMode.OFF,
         )
@@ -63,8 +58,7 @@ class MaintenanceService(BaseService):
         return available_modes
 
     async def set_mode(self, mode: MaintenanceMode) -> None:
-        key = MaintenanceModeKey()
-        await self.redis_repository.set(key=key, value=mode)
+        await self.redis_repository.set(key=MaintenanceModeKey(), value=mode)
 
     async def is_active(self) -> bool:
         return await self.get_current_mode() != MaintenanceMode.OFF
@@ -76,8 +70,10 @@ class MaintenanceService(BaseService):
         return await self.get_current_mode() == MaintenanceMode.GLOBAL
 
     async def add_user_to_waitlist(self, telegram_id: int) -> bool:
-        key = MaintenanceWaitListKey()
-        added_count = await self.redis_repository.collection_add(key, *[telegram_id])
+        added_count = await self.redis_repository.collection_add(
+            key=MaintenanceWaitListKey(),
+            *[telegram_id],
+        )
 
         if added_count > 0:
             logger.info(f"User '{telegram_id}' added to waiting list")
@@ -103,8 +99,8 @@ class MaintenanceService(BaseService):
 
     async def remove_user_from_waitlist(self, telegram_id: int) -> bool:
         removed_count = await self.redis_repository.collection_remove(
-            MaintenanceWaitListKey(),
-            telegram_id,
+            key=MaintenanceWaitListKey(),
+            value=telegram_id,
         )
         if removed_count > 0:
             logger.info(f"User '{telegram_id}' removed from waiting list")

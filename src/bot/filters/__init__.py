@@ -9,7 +9,7 @@ __all__ = [
 ]
 
 
-def setup_global_filters(router: Router):
+def setup_global_filters(router: Router) -> None:
     filters = [
         PrivateFilter(),  # global filter allows only private chats
     ]

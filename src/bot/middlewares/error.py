@@ -3,6 +3,7 @@ from typing import Any, Awaitable, Callable, Optional, cast
 
 from aiogram.types import ErrorEvent, TelegramObject
 from aiogram.types import User as AiogramUser
+from aiogram.utils.formatting import Text
 from loguru import logger
 
 from src.core.enums import MiddlewareEventType
@@ -30,14 +31,14 @@ class ErrorMiddleware(EventTypedMiddleware):
 
         traceback_str = traceback.format_exc()
         error_type_name = type(error_event.exception).__name__
-        error_message = str(error_event.exception)[:1021]
+        error_message = Text(str(error_event.exception)[:1021])
 
         await send_error_notification_task.kiq(
             update_id=error_event.update.update_id,
             user_id=user_id,
             user_name=user_name,
             error_type_name=error_type_name,
-            error_message=error_message.replace("<", "&lt;").replace(">", "&gt;"),
+            error_message=error_message.as_html(),  # error_message.replace("<", "&lt;").replace(">", "&gt;"),
             traceback_str=traceback_str,
         )
 

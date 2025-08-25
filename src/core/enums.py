@@ -18,6 +18,7 @@ class BannerName(StrEnum):
     DEFAULT = auto()
     MENU = auto()
     DASHBOARD = auto()
+    SUBSCRIPTION = auto()
 
 
 class BannerFormat(StrEnum):

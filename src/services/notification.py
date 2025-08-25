@@ -1,27 +1,18 @@
 import asyncio
 from typing import Any, Optional, cast
 
-from aiogram.types import (
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    Message,
-)
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from loguru import logger
 
 from src.bot.states import Notification
-from src.core.enums import (
-    Locale,
-    MediaType,
-    MessageEffect,
-    SystemNotificationType,
-    UserNotificationType,
-)
+from src.core.enums import Locale, SystemNotificationType, UserNotificationType, UserRole
 from src.core.storage_keys import SystemNotificationSettingsKey, UserNotificationSettingsKey
-from src.core.utils.types import AnyInputFile, AnyKeyboard
-from src.infrastructure.database.models.dto import (
+from src.core.utils.message_payload import MessagePayload
+from src.core.utils.types import AnyKeyboard
+from src.infrastructure.database.models.dto import UserDto
+from src.infrastructure.redis.notification_settings import (
     SystemNotificationDto,
-    UserDto,
     UserNotificationDto,
 )
 
@@ -32,234 +23,148 @@ class NotificationService(BaseService):
     async def notify_user(
         self,
         user: Optional[UserDto],
-        text_key: str,
+        payload: MessagePayload,
         ntf_type: Optional[UserNotificationType] = None,
-        media: Optional[AnyInputFile] = None,
-        media_type: Optional[MediaType] = None,
-        reply_markup: Optional[AnyKeyboard] = None,
-        auto_delete_after: Optional[int] = 5,
-        add_close_button: bool = False,
-        message_effect: Optional[MessageEffect] = None,
-        **kwargs: Any,
     ) -> bool:
         if not user:
             logger.warning("Skipping user notification: user object is empty")
             return False
 
-        if ntf_type:
-            settings = await self.get_user_settings()
-            settings_data = settings.model_dump()
+        if ntf_type and not await self._is_notification_enabled(ntf_type):
+            logger.debug(
+                f"Skipping user notification for '{user.telegram_id}': "
+                f"notification type is disabled in settings"
+            )
+            return False
 
-            if not settings_data.get(ntf_type, False):
-                logger.debug(
-                    f"Skipping user notification for '{user.telegram_id}': "
-                    f"notification type is disabled in settings"
-                )
-                return False
-
-        logger.debug(f"Attempting to send user notification '{text_key}' to '{user.telegram_id}'")
-
-        sent_message = await self._send_message(
-            chat_id=user.telegram_id,
-            text_key=text_key,
-            locale=user.language,
-            media=media,
-            media_type=media_type,
-            reply_markup=reply_markup,
-            auto_delete_after=auto_delete_after,
-            add_close_button=add_close_button,
-            message_effect=message_effect,
-            **kwargs,
+        logger.debug(
+            f"Attempting to send user notification '{payload.text_key}' to '{user.telegram_id}'"
         )
+        sent_message = await self._send_message(user, payload)
 
         return bool(sent_message)
 
     async def system_notify(
         self,
         devs: Optional[list[UserDto]],
-        text_key: str,
+        payload: MessagePayload,
         ntf_type: SystemNotificationType,
-        media: Optional[AnyInputFile] = None,
-        media_type: Optional[MediaType] = None,
-        reply_markup: Optional[AnyKeyboard] = None,
-        auto_delete_after: Optional[int] = None,
-        add_close_button: bool = True,
-        message_effect: Optional[MessageEffect] = None,
-        **kwargs: Any,
     ) -> list[bool]:
         if not devs:
-            logger.warning("Skipping system notification: devs list is empty")
-            return []
+            devs.append(self._get_temp_dev())
 
-        settings = await self.get_system_settings()
-        settings_data = settings.model_dump()
-
-        if not settings_data.get(ntf_type, False):
+        if not await self._is_notification_enabled(ntf_type):
             logger.debug("Skipping system notification: notification type is disabled in settings")
             return []
 
-        logger.debug(f"Attempting to send system notification '{text_key}' to {len(devs)} devs")
+        logger.debug(
+            f"Attempting to send system notification '{payload.text_key}' to {len(devs)} devs"
+        )
 
-        results: list[bool] = []
-        for dev in devs:
-            success = bool(
-                await self._send_message(
-                    chat_id=dev.telegram_id,
-                    text_key=text_key,
-                    locale=dev.language,
-                    media=media,
-                    media_type=media_type,
-                    reply_markup=reply_markup,
-                    auto_delete_after=auto_delete_after,
-                    add_close_button=add_close_button,
-                    message_effect=message_effect,
-                    **kwargs,
-                )
-            )
-            results.append(success)
+        async def send_to_dev(dev: UserDto) -> bool:
+            return bool(await self._send_message(user=dev, payload=payload))
 
-        return results
+        tasks = [send_to_dev(dev) for dev in devs]
+        results = await asyncio.gather(*tasks)
 
-    async def notify_super_dev(
-        self,
-        dev: Optional[UserDto],
-        text_key: str,
-        media: Optional[AnyInputFile] = None,
-        media_type: Optional[MediaType] = None,
-        reply_markup: Optional[AnyKeyboard] = None,
-        auto_delete_after: Optional[int] = None,
-        add_close_button: bool = True,
-        message_effect: Optional[MessageEffect] = None,
-        **kwargs: Any,
-    ) -> bool:
+        return cast(list[bool], results)
+
+    async def notify_super_dev(self, dev: Optional[UserDto], payload: MessagePayload) -> bool:
         if not dev:
-            logger.warning("Skipping super dev notification: user object is empty")
-            return False
+            dev = self._get_temp_dev()
 
         if dev.telegram_id != self.config.bot.dev_id:
             logger.warning(
-                f"Skipping super dev notification: "
-                f"user ID does not match configured dev_id '{self.config.bot.dev_id}'"
+                f"Skipping super dev notification: user ID does not match configured dev_id "
+                f"'{self.config.bot.dev_id}'"
             )
             return False
 
         logger.debug(
-            f"Attempting to send super dev notification '{text_key}' to '{dev.telegram_id}'"
+            f"Attempting to send super dev notification '{payload.text_key}' to '{dev.telegram_id}'"
         )
 
-        return bool(
-            await self._send_message(
-                chat_id=dev.telegram_id,
-                text_key=text_key,
-                locale=dev.language,
-                media=media,
-                media_type=media_type,
-                reply_markup=reply_markup,
-                auto_delete_after=auto_delete_after,
-                add_close_button=add_close_button,
-                message_effect=message_effect,
-                **kwargs,
-            )
-        )
+        return bool(await self._send_message(user=dev, payload=payload))
 
     #
 
     async def get_system_settings(self) -> SystemNotificationDto:
-        key = SystemNotificationSettingsKey()
         settings = await self.redis_repository.get(
-            key=key, validator=SystemNotificationDto, default=SystemNotificationDto()
+            key=SystemNotificationSettingsKey(),
+            validator=SystemNotificationDto,
+            default=SystemNotificationDto(),
         )
         return cast(SystemNotificationDto, settings)
 
     async def set_system_settings(self, data: SystemNotificationDto) -> None:
-        key = SystemNotificationSettingsKey()
-        await self.redis_repository.set(key=key, value=data)
+        await self.redis_repository.set(key=SystemNotificationSettingsKey(), value=data)
 
     async def get_user_settings(self) -> UserNotificationDto:
         key = UserNotificationSettingsKey()
         settings = await self.redis_repository.get(
-            key=key, validator=UserNotificationDto, default=UserNotificationDto()
+            key=key,
+            validator=UserNotificationDto,
+            default=UserNotificationDto(),
         )
         return cast(UserNotificationDto, settings)
 
     async def set_user_settings(self, data: UserNotificationDto) -> None:
-        key = UserNotificationSettingsKey()
-        await self.redis_repository.set(key=key, value=data)
+        await self.redis_repository.set(key=UserNotificationSettingsKey(), value=data)
 
     #
 
-    async def _send_message(
-        self,
-        chat_id: int,
-        text_key: str,
-        locale: Locale = Locale.EN,
-        media: Optional[AnyInputFile] = None,
-        media_type: Optional[MediaType] = None,
-        reply_markup: Optional[AnyKeyboard] = None,
-        auto_delete_after: Optional[int] = None,
-        add_close_button: bool = True,
-        message_effect: Optional[MessageEffect] = None,
-        **kwargs: Any,
-    ) -> Optional[Message]:
-        i18n = self.translator_hub.get_translator_by_locale(locale=locale)
-
-        if text_key:
-            message_text = i18n.get(text_key, **kwargs)
-        else:
-            message_text = text_key
-
-        message_effect_id = message_effect if message_effect is not None else None
-        sent_message: Optional[Message] = None
+    async def _send_message(self, user: UserDto, payload: MessagePayload) -> Optional[Message]:
+        i18n = self.translator_hub.get_translator_by_locale(locale=user.language)
+        message_text = i18n.get(payload.text_key, **payload.kwargs) if payload.text_key else None
+        message_effect_id = payload.message_effect if payload.message_effect is not None else None
 
         final_reply_markup = self._prepare_reply_markup(
-            reply_markup,
-            add_close_button,
-            auto_delete_after,
-            locale,
-            chat_id,
+            payload.reply_markup,
+            payload.add_close_button,
+            payload.auto_delete_after,
+            user.language,
+            user.telegram_id,
         )
 
         try:
-            if media and media_type:
-                send_func = media_type.get_function(self.bot)
-                media_arg_name = media_type
-                payload = {
-                    "chat_id": chat_id,
+            if payload.media and payload.media_type:
+                send_func = payload.media_type.get_function(self.bot)
+                media_arg_name = payload.media_type
+                tg_payload = {
+                    "chat_id": user.telegram_id,
                     "caption": message_text,
                     "reply_markup": final_reply_markup,
                     "message_effect_id": message_effect_id,
-                    media_arg_name: media,
+                    media_arg_name: payload.media,
                 }
-                sent_message = await send_func(**payload)
+                sent_message = await send_func(**tg_payload)
             else:
-                if media and not media_type:
+                if payload.media and not payload.media_type:
                     logger.warning(
                         f"Validation error: Media provided but media_type is missing "
-                        f"for chat '{chat_id}'. Sending as text message"
+                        f"for chat '{user.telegram_id}'. Sending as text message"
                     )
                 sent_message = await self.bot.send_message(
-                    chat_id=chat_id,
+                    chat_id=user.telegram_id,
                     text=message_text,
                     message_effect_id=message_effect_id,
                     reply_markup=final_reply_markup,
                 )
 
-            if sent_message:
-                logger.debug(f"Notification '{text_key}' successfully sent to '{chat_id}'")
-                if auto_delete_after is not None:
-                    asyncio.create_task(
-                        self._schedule_message_deletion(
-                            chat_id,
-                            sent_message.message_id,
-                            auto_delete_after,
-                        )
+            if payload.auto_delete_after is not None:
+                asyncio.create_task(
+                    self._schedule_message_deletion(
+                        chat_id=user.telegram_id,
+                        message_id=sent_message.message_id,
+                        delay=payload.auto_delete_after,
                     )
-                return sent_message
-            return None
+                )
+            return sent_message
 
         except Exception as exception:
             logger.error(
-                f"Failed to send notification '{text_key}' to '{chat_id}': {exception}",
+                f"Failed to send notification '{payload.text_key}' "
+                f"to '{user.telegram_id}': {exception}",
                 exc_info=True,
             )
             return None
@@ -272,20 +177,53 @@ class NotificationService(BaseService):
         locale: Locale,
         chat_id: int,
     ) -> Optional[AnyKeyboard]:
-        if auto_delete_after is not None:
+        if not add_close_button or auto_delete_after is not None:
             return reply_markup
 
-        if add_close_button:
-            if reply_markup is None:
-                return self._get_close_notification_keyboard(locale=locale)
-            if isinstance(reply_markup, InlineKeyboardMarkup):
-                logger.debug(f"Merging close button with existing keyboard for chat '{chat_id}'")
-                return self._merge_keyboards_with_close_button(reply_markup, locale)
-            logger.warning(
-                f"Unsupported reply_markup type '{type(reply_markup).__name__}' "
-                f"for chat '{chat_id}'. Close button will not be added"
-            )
+        close_button = self._get_close_notification_button(locale=locale)
+
+        if reply_markup is None:
+            return self._get_close_notification_keyboard(close_button)
+
+        if isinstance(reply_markup, InlineKeyboardMarkup):
+            builder = InlineKeyboardBuilder.from_markup(reply_markup)
+            builder.row(close_button)
+            return builder.as_markup()
+
+        logger.warning(
+            f"Unsupported reply_markup type '{type(reply_markup).__name__}' "
+            f"for chat '{chat_id}'. Close button will not be added"
+        )
         return reply_markup
+
+    def _get_close_notification_button(self, locale: Locale) -> InlineKeyboardButton:
+        i18n = self.translator_hub.get_translator_by_locale(locale=locale)
+        button_text = i18n.get("btn-close-notification")
+        return InlineKeyboardButton(
+            text=button_text,
+            callback_data=Notification.CLOSE.state,
+        )
+
+    def _get_close_notification_keyboard(
+        self,
+        button: InlineKeyboardButton,
+    ) -> InlineKeyboardMarkup:
+        builder = InlineKeyboardBuilder()
+        builder.row(button)
+        return builder.as_markup()
+
+    def _merge_keyboards_with_close_button(
+        self,
+        existing_markup: InlineKeyboardMarkup,
+        locale: Locale,
+    ) -> InlineKeyboardMarkup:
+        merged_builder = InlineKeyboardBuilder()
+
+        for row in existing_markup.inline_keyboard:
+            merged_builder.row(*row)
+
+        merged_builder.row(self._get_close_notification_button(locale=locale))
+        return merged_builder.as_markup()
 
     async def _schedule_message_deletion(self, chat_id: int, message_id: int, delay: int) -> None:
         logger.debug(
@@ -302,28 +240,24 @@ class NotificationService(BaseService):
                 f"Failed to delete message '{message_id}' in chat '{chat_id}': {exception}"
             )
 
-    def _get_close_notification_button(self, locale: Locale) -> InlineKeyboardButton:
-        i18n = self.translator_hub.get_translator_by_locale(locale=locale)
-        button_text = i18n.get("btn-close-notification")
-        return InlineKeyboardButton(
-            text=button_text,
-            callback_data=Notification.CLOSE.state,
+    async def _is_notification_enabled(self, ntf_type: Any) -> bool:
+        if isinstance(ntf_type, UserNotificationType):
+            settings = await self.get_user_settings()
+        elif isinstance(ntf_type, SystemNotificationType):
+            settings = await self.get_system_settings()
+        else:
+            return False
+
+        settings_data = settings.model_dump()
+        return bool(settings_data.get(ntf_type.value, False))
+
+    def _get_temp_dev(self) -> UserDto:
+        temp_dev = UserDto(
+            telegram_id=self.config.bot.dev_id,
+            name="TempDev",
+            role=UserRole.DEV,
+            language=Locale.EN,
         )
 
-    def _get_close_notification_keyboard(self, locale: Locale) -> InlineKeyboardMarkup:
-        builder = InlineKeyboardBuilder()
-        builder.row(self._get_close_notification_button(locale=locale))
-        return builder.as_markup()
-
-    def _merge_keyboards_with_close_button(
-        self,
-        existing_markup: InlineKeyboardMarkup,
-        locale: Locale,
-    ) -> InlineKeyboardMarkup:
-        merged_builder = InlineKeyboardBuilder()
-
-        for row in existing_markup.inline_keyboard:
-            merged_builder.row(*row)
-
-        merged_builder.row(self._get_close_notification_button(locale=locale))
-        return merged_builder.as_markup()
+        logger.warning("Dev is empty! Adding a fallback dev from environment config")
+        return temp_dev

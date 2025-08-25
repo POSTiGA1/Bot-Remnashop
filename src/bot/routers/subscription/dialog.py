@@ -16,7 +16,7 @@ from .getters import (
 from .handlers import on_duration_selected, on_plan_selected, on_subscription_plans
 
 subscription = Window(
-    Banner(BannerName.MENU),
+    Banner(BannerName.SUBSCRIPTION),
     I18nFormat("msg-subscription-main"),
     Row(
         Button(
@@ -39,7 +39,7 @@ subscription = Window(
 )
 
 plans = Window(
-    Banner(BannerName.MENU),
+    Banner(BannerName.SUBSCRIPTION),
     I18nFormat("msg-subscription-plans"),
     Column(
         Select(
@@ -71,7 +71,7 @@ plans = Window(
 )
 
 duration = Window(
-    Banner(BannerName.MENU),
+    Banner(BannerName.SUBSCRIPTION),
     I18nFormat("msg-subscription-duration"),
     Group(
         Select(
@@ -109,7 +109,7 @@ duration = Window(
 )
 
 payment_method = Window(
-    Banner(BannerName.MENU),
+    Banner(BannerName.SUBSCRIPTION),
     I18nFormat("msg-subscription-payment-method"),
     Column(
         Select(
@@ -146,7 +146,7 @@ payment_method = Window(
 )
 
 confirm = Window(
-    Banner(BannerName.MENU),
+    Banner(BannerName.SUBSCRIPTION),
     I18nFormat("msg-subscription-confirm"),
     Row(
         SwitchTo(

@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 
 from src.core.enums import Currency, PaymentGatewayType
 
@@ -14,5 +14,5 @@ class PaymentGatewayDto(TrackableModel):
     currency: Currency
     is_active: bool
 
-    shop_id: Optional[str]
-    api_token: Optional[str]
+    merchant_id: Optional[str]
+    secret: Optional[SecretStr]
