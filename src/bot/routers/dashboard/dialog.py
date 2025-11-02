@@ -1,0 +1,79 @@
+from aiogram_dialog import Dialog, StartMode, Window
+from aiogram_dialog.widgets.kbd import Button, Row, Start
+from magic_filter import F
+
+from src.bot.keyboards import back_main_menu_button
+from src.bot.routers.extra.test import show_dev_popup
+from src.bot.states import (
+    Dashboard,
+    DashboardAccess,
+    DashboardBroadcast,
+    DashboardPromocodes,
+    DashboardRemnashop,
+    DashboardStatistics,
+    DashboardUsers,
+)
+from src.bot.widgets import Banner, I18nFormat, IgnoreUpdate
+from src.core.enums import BannerName
+
+from .remnawave.handlers import start_remnawave_window
+
+dashboard = Window(
+    Banner(BannerName.DASHBOARD),
+    I18nFormat("msg-dashboard-main"),
+    Row(
+        Start(
+            text=I18nFormat("btn-dashboard-statistics"),
+            id="statistics",
+            state=DashboardStatistics.MAIN,
+        ),
+        Start(
+            text=I18nFormat("btn-dashboard-users"),
+            id="users",
+            state=DashboardUsers.MAIN,
+            mode=StartMode.RESET_STACK,
+        ),
+    ),
+    Row(
+        Start(
+            text=I18nFormat("btn-dashboard-broadcast"),
+            id="broadcast",
+            state=DashboardBroadcast.MAIN,
+            mode=StartMode.RESET_STACK,
+        ),
+        Button(
+            text=I18nFormat("btn-dashboard-promocodes"),
+            id="promocodes",
+            on_click=show_dev_popup,
+            # state=DashboardPromocodes.MAIN,
+            # mode=StartMode.RESET_STACK,
+        ),
+    ),
+    Row(
+        Start(
+            text=I18nFormat("btn-dashboard-access"),
+            id="access",
+            state=DashboardAccess.MAIN,
+            mode=StartMode.RESET_STACK,
+        ),
+    ),
+    Row(
+        Button(
+            text=I18nFormat("btn-dashboard-remnawave"),
+            id="remnawave",
+            on_click=start_remnawave_window,
+        ),
+        Start(
+            text=I18nFormat("btn-dashboard-remnashop"),
+            id="remnashop",
+            state=DashboardRemnashop.MAIN,
+            mode=StartMode.RESET_STACK,
+        ),
+        when=F["middleware_data"]["user"].is_dev,
+    ),
+    *back_main_menu_button,
+    IgnoreUpdate(),
+    state=Dashboard.MAIN,
+)
+
+router = Dialog(dashboard)

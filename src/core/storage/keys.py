@@ -1,0 +1,15 @@
+from src.core.storage.key_builder import StorageKey
+
+
+class WebhookLockKey(StorageKey, prefix="webhook_lock"):
+    bot_id: int
+    webhook_hash: str
+
+
+class AccessWaitListKey(StorageKey, prefix="access_wait_list"): ...
+
+
+class RecentRegisteredUsersKey(StorageKey, prefix="recent_registered_users"): ...
+
+
+class RecentActivityUsersKey(StorageKey, prefix="recent_activity_users"): ...

@@ -1,34 +1,92 @@
-[tool.poetry]
-name = "3xui-shop"
-version = "2.0.0"
+[project]
+name = "remnashop"
+version = "0.0.0"
 description = "This is a Telegram bot for selling VPN subscriptions. It works with Remnawave"
-authors = ["snoups"]
+authors = [{ name = "snoups" }]
 readme = "README.md"
-package-mode = false
+license = "MIT"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "aiogram~=3.22.0",
+    "aiogram-dialog~=2.4.0",
+    "alembic~=1.16.5",
+    "asyncpg~=0.30.0",
+    "dishka~=1.6.0",
+    "fastapi>=0.120.2",
+    "fluentogram~=1.2.1",
+    "greenlet>=3.2.4",
+    "loguru~=0.7.3",
+    "msgspec~=0.19.0",
+    "pydantic-settings~=2.11.0",
+    "redis~=6.4.0",
+    "remnawave>=2.2.3",
+    #"remnawave @ git+https://github.com/remnawave/python-sdk.git@development",
+    "taskiq~=0.11.19",
+    "taskiq-redis~=1.1.2",
+    "uvicorn>=0.38.0",
+    "cryptography>=46.0.3",
+    "sqlalchemy[mypy]>=2.0.0",
+]
 
+[project.urls]
+homepage = "https://t.me/@remna_shop"
+repository = "https://github.com/snoups/remnashop"
 
-[tool.poetry.dependencies]
-python = "^3.12"
-aiogram = "^3.20.0.post0"
-aiogram-dialog = "^2.3.1"
-alembic = "^1.15.2"
-fastapi = "^0.115.12"
-pydantic-settings = "^2.9.1"
-redis = "^6.1.0"
-uvicorn = "^0.34.2"
-asyncpg = "^0.30.0"
-celery = "^5.5.2"
-aiogram-i18n = "^1.4"
-fluent-runtime = "^0.4.0"
-msgspec = "^0.19.0"
-greenlet = "^3.2.2"
+[dependency-groups]
+dev = [
+    "mypy>=1.18.2",
+    "ruff>=0.14.2",
+    "pytest>=8.4.2",
+    "watchfiles>=1.1.1",
+    "ftl-extract>=0.9.0",
+    "types-cachetools",
+]
 
-[tool.poetry.group.dev.dependencies]
-mypy = "^1.15.0"
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+lint.select = [
+    "C",
+    "DTZ",
+    "E",
+    "F",
+    "I",
+    "ICN",
+    "N",
+    "PLC",
+    "PLE",
+    "Q",
+    "T",
+    "W",
+    "YTT",
+]
+lint.ignore = ["N805"]
+exclude = ["venv", ".venv", ".idea", "tests"]
 
 [tool.mypy]
-mypy_path = ["app"]
+packages = ["src"]
+plugins = ["sqlalchemy.ext.mypy.plugin", "pydantic.mypy"]
+exclude = ["venv", ".venv", ".idea", "tests"]
+warn_unused_configs = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+warn_unused_ignores = true
+warn_return_any = true
+no_implicit_reexport = true
+strict_equality = true
+extra_checks = true
+explicit_package_bases = true
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[[tool.mypy.overrides]]
+module = ["fluentogram.*", "remnawave.*"]
+follow_untyped_imports = true
+
+[[tool.mypy.overrides]]
+module = ["app.bot.handlers.*"]
+strict_optional = false
+warn_return_any = false
+disable_error_code = ["union-attr"]
