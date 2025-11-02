@@ -188,16 +188,16 @@ Download `docker-compose.yml` compose-file and `.env` by running these commands:
 
     - For external panel (the bot is hosted on a separate server from the panel):
     ```
-    curl -o docker-compose.yml https://raw.githubusercontent.com/snoups/remnashop/refs/heads/dev/docker-compose.prod.external.yml
+    curl -o docker-compose.yml https://raw.githubusercontent.com/snoups/remnashop/refs/heads/main/docker-compose.prod.external.yml
     ```
     - For internal panel (the bot and panel are hosted on the same server):
     ```
-    curl -o docker-compose.yml https://raw.githubusercontent.com/snoups/remnashop/refs/heads/dev/docker-compose.prod.internal.yml
+    curl -o docker-compose.yml https://raw.githubusercontent.com/snoups/remnashop/refs/heads/main/docker-compose.prod.internal.yml
     ```
 
 - Get `.env` file
     ```
-    curl -o .env https://raw.githubusercontent.com/snoups/remnashop/refs/heads/dev/.env.example
+    curl -o .env https://raw.githubusercontent.com/snoups/remnashop/refs/heads/main/.env.example
     ```
 
 

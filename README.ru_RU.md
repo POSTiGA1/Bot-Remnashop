@@ -188,16 +188,16 @@ mkdir /opt/remnashop && cd /opt/remnashop
 
     - Для внешней панели (бот и панель находятся на разных серверах):
     ```
-    curl -o docker-compose.yml https://raw.githubusercontent.com/snoups/remnashop/refs/heads/dev/docker-compose.prod.external.yml
+    curl -o docker-compose.yml https://raw.githubusercontent.com/snoups/remnashop/refs/heads/main/docker-compose.prod.external.yml
     ```
     - Для внутренней панели (бот и панель находятся на одном сервере):
     ```
-    curl -o docker-compose.yml https://raw.githubusercontent.com/snoups/remnashop/refs/heads/dev/docker-compose.prod.internal.yml
+    curl -o docker-compose.yml https://raw.githubusercontent.com/snoups/remnashop/refs/heads/main/docker-compose.prod.internal.yml
     ```
 
 - Скачать `.env`:
     ```
-    curl -o .env https://raw.githubusercontent.com/snoups/remnashop/refs/heads/dev/.env.example
+    curl -o .env https://raw.githubusercontent.com/snoups/remnashop/refs/heads/main/.env.example
     ```
 
 
